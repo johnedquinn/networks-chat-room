@@ -14,6 +14,9 @@ pbald, jquin13, rreutima
 
 #include "lib/pg3lib.h"
 
+/* GLOBALs */
+int NUM_THREADS = 0;
+
 /*
 * @func   client_interaction
 * @desc   thread function for handling user messages
@@ -32,7 +35,35 @@ void* client_interaction(void* arg){
 */
 int main(int argc, char* argv[]){
 
+  // Get port number
+  int port;
+  if(argc == 2){
+    port = atoi(argv[1]);
+  } else {
+    fprintf(stderr, "Usage: ./myserver [PORT]\n");
+    exit(1);
+  }
 
+  // @TODO set up socket for connections
+
+
+  while((client_sock = accept(s.get_s(), (struct sockaddr *)$s.s_in, &s_inlen)) > 0 ){
+    
+    if(NUM_THREADS == 10){
+      fprint(stdout, "Connection Refused: Max clients online.\n");
+      continue;
+    }
+
+    // Create new thread for each accepted client
+    pthread_t user_thread;
+    struct user_thread_args args;
+    NUM_THREADS++;
+    if(pthread_create(&user_thread, NULL, client_interaction, (void*)&args) < 0){
+      perror("Error creating user thread\n");
+      return 1;
+    }
+
+  }
 
 
   return 0;
