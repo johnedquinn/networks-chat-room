@@ -83,7 +83,7 @@ int main(int argc, char* argv[]){
 
     }
 
-    s.close_socket();
+    close(s);
 
   }
 
