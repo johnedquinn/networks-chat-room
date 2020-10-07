@@ -1,3 +1,3 @@
-Patrick Bald - pbald
-John Quinn - jquinn13
-Rob Reutiman - rreutima
+Patrick Bald - pbald<br/>
+John Quinn - jquinn13<br/>
+Rob Reutiman - rreutima<br/>
