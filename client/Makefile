@@ -1,5 +1,5 @@
-CC = gcc
-CFLAGS = -g -Wall -Werror -std=gnu99 -I../lib -fPIC
+CC = g++
+CFLAGS = -g -Wall -Werror -std=c++11 -I../lib -fPIC
 LD = gcc
 LDFLAGS = -L../lib -lcrypto -lz -pthread
 
@@ -9,7 +9,7 @@ myclient:	client.o
 	@echo "Linking $@"
 	$(LD) -o $@ $^ $(LDFLAGS)
 
-%.o: %.c pg3lib.h
+%.o: %.cpp pg3lib.h
 	@echo "Compiling $@"
 	$(CC) $(CFLAGS) -c -o $@ $<
 
