@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -g -Wall -Werror -std=gnu99 -I../lib -fPIC
 LD = gcc
-LDFLAGS = -L../lib -lcrypto -lz
+LDFLAGS = -L../lib -lcrypto -lz -pthread
 
 all: myclient
 

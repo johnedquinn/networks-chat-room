@@ -28,7 +28,7 @@ int ACTIVE = 1;
 void* handle_messages(void* arg){
 
     while(ACTIVE){
-      char message[BUFSIZ];
+      //char message[BUFSIZ];
 
       // @todo recv message
 
@@ -37,7 +37,20 @@ void* handle_messages(void* arg){
     return NULL;
 }
 
-void login(char* username){
+/*
+ * @func   login
+ * @desc   Logs user in
+ * --
+ * @param  s         socket descriptor
+ * @param  username  client username
+ */
+void login(int s, char* username){
+	
+	// Send Username
+	if (send(s, username, sizeof(username), 0) < 0) {
+		fprintf(stdout, "Unable to send username\n");
+		exit(1);
+	}
 
 }
 
@@ -62,7 +75,7 @@ int main(int argc, char* argv[]){
   /* Variables */
   struct hostent *hp;
   struct sockaddr_in sin;
-  char buf[MAX_LINE];
+  //char buf[MAX_LINE];
   int s;
 
   /* Translate host name into peer's IP address */
@@ -95,7 +108,9 @@ int main(int argc, char* argv[]){
   }
 
   while(!EXIT){
-    login(username);
+
+		// Perform Log In and Sign Up
+    login(s, username);
 
     // Make thread for handling messages
     pthread_t message_thread;
@@ -112,9 +127,9 @@ int main(int argc, char* argv[]){
       fgets(option, BUFSIZ, stdin);
 
       if(!strncmp(option, "p", 1)){
-        private_message(); // @todo write this func
+        //private_message(); // @TODO write this func
       } else if (!strncmp(option, "b", 1)){
-        broadcast(); // @todo write this func
+        //broadcast(); // @TODO write this func
       } else {
         fprintf(stdout, "Invalid input %s\n", option);
       }
