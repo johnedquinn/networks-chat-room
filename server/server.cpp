@@ -19,7 +19,7 @@ pbald, jquin13, rreutima
 
 /* GLOBALs */
 int NUM_THREADS = 0;
-char * AUTH_FILE = "authfile.txt"
+char AUTH_FILE [30] = "authfile.txt";
 
 /*
  * @func   client_authenticate
@@ -31,22 +31,24 @@ void client_authenticate (int s) {
 	
 	// Receive Client Username
 	char uname [BUFSIZ];
-	if(recv(client_sock, uname, sizeof(uname), 0) < 0) {
+	if(recv(s, uname, sizeof(uname), 0) < 0) {
 		fprintf(stderr, "Unable to get client username\n");
 		exit(1);
 	}
-	printf("Username: %s\n", username);
+	fprintf(stdout, "Username: %s\n", uname);
 
 	// Generate Server Public Key
 	char * skey = getPubKey();
+	fprintf(stdout, "Sending Server Pub Key: %s\n", skey);
 	
 	// Send Public Key
-	if (send(s, skey, sizeof(skey), 0) < 0) {
+	if (send(s, skey, strlen(skey) + 1, 0) < 0) {
 		fprintf(stdout, "Unable to send server public key\n");
 		exit(1);
 	}
 
 	// Receive Client Password
+	char epass [BUFSIZ];
 	if (recv(s, epass, sizeof(epass), 0) < 0) {
 		fprintf(stderr, "Unable to get client username\n");
 		exit(1);
@@ -54,9 +56,10 @@ void client_authenticate (int s) {
 
 	// Decrypt Password
 	char * pass = decrypt(epass);
+	fprintf(stdout, "Decrypted Password: %s\n", pass);
 
 	// Open Authentication File
-	FILE * fp = fopen(AUTH_FILE, "rw");
+	FILE * fp = fopen(AUTH_FILE, "a+");
 	if (!fp) {
 		fprintf(stderr, "Unable to open Auth File\n");
 		exit(1);
@@ -65,6 +68,7 @@ void client_authenticate (int s) {
 	// Loop Through File
 	char fline [BUFSIZ];
 	char *fuser; char *fpass;
+	int userFound = 0;
 	while (fgets(fline, sizeof(fline), fp)) {
 		fuser = strtok(fline, "\t");
 		fpass = strtok(NULL, "\n");
@@ -82,12 +86,13 @@ void client_authenticate (int s) {
 
 	// Send Acknowledgement
 	short ack = 1; ack = htons(ack);
-	if (send(s, ack, sizeof(ack), 0) < 0) {
+	if (send(s, &ack, sizeof(ack), 0) < 0) {
 		fprintf(stdout, "Unable to send server public key\n");
 		exit(1);
 	}
 
 	// Receive Client Public Key
+	char ckey [BUFSIZ];
 	if (recv(s, ckey, sizeof(ckey), 0) < 0) {
 		fprintf(stderr, "Unable to get client pubkey\n");
 		exit(1);
@@ -113,6 +118,9 @@ void* client_interaction(void* arguments){
 	int len;
 	char command[MAX_LINE] = "";
 	args *a = (args*)arguments;
+
+	// Login or Create User
+	client_authenticate(a->s);
 
 	/* Loop to get commands */
 	while(1) {
