@@ -3,7 +3,7 @@ CFLAGS = -g -Wall -Werror -std=c++11 -I../lib -fPIC
 LD = gcc
 LDFLAGS = -L../lib -lcrypto -lz -pthread
 
-all: myclient
+all = myclient
 
 myclient:	client.o
 	@echo "Linking $@"

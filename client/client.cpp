@@ -45,9 +45,51 @@ void* handle_messages(void* arg){
  * @param  username  client username
  */
 void login(int s, char* username){
+
 	
 	// Send Username
-	if (send(s, username, sizeof(username), 0) < 0) {
+	if (send(s, username, strlen(username) + 1, 0) < 0) {
+		fprintf(stdout, "Unable to send username\n");
+		exit(1);
+	}
+
+	// Receive Server Public Key
+	char skey [BUFSIZ];
+	if (recv(s, skey, sizeof(skey), 0) < 0) {
+		fprintf(stderr, "Unable to Receive Public Key\n");
+		exit(1);
+	}
+	fprintf(stdout, "Received Server Key: %s\n", skey);
+
+	// Get User Password
+	fprintf(stdout, "Password: ");
+	char pass [BUFSIZ];
+	fgets(pass, sizeof(pass), stdin);
+
+	// Encrypt Password
+	char * epass = encrypt(pass, skey);
+
+	// Send Encrypted Password
+	if (send(s, epass, strlen(epass) + 1, 0) < 0) {
+		fprintf(stdout, "Unable to send username\n");
+		exit(1);
+	}
+
+	// Receive Acknowledgement
+	short ack;
+	if (recv(s, &ack, sizeof(ack), 0) < 0) {
+		fprintf(stderr, "Unable to Receive Public Key\n");
+		exit(1);
+	}
+	if (ntohs(ack) < 0) {
+		fprintf(stdout, "Unable to Login or Create Account");
+	}
+	
+	// Generate Client Public Key
+	char * ckey = getPubKey();
+
+	// Send Public Key
+	if (send(s, ckey, strlen(ckey) + 1, 0) < 0) {
 		fprintf(stdout, "Unable to send username\n");
 		exit(1);
 	}

@@ -21,6 +21,81 @@ using namespace std;
 
 /* GLOBALs */
 int NUM_THREADS = 0;
+char AUTH_FILE [30] = "authfile.txt";
+
+/*
+ * @func   client_authenticate
+ * @desc   logs in user or creates account
+ * --
+ * @param  s  socket desc
+ */
+void client_authenticate (int s, char uname []) {
+	
+	// Generate Server Public Key
+	char * skey = getPubKey();
+	fprintf(stdout, "Sending Server Pub Key: %s\n", skey);
+	
+	// Send Public Key
+	if (send(s, skey, strlen(skey) + 1, 0) < 0) {
+		fprintf(stdout, "Unable to send server public key\n");
+		exit(1);
+	}
+
+	// Receive Client Password
+	char epass [BUFSIZ];
+	if (recv(s, epass, sizeof(epass), 0) < 0) {
+		fprintf(stderr, "Unable to get client username\n");
+		exit(1);
+	}
+
+	// Decrypt Password
+	char * pass = decrypt(epass);
+	fprintf(stdout, "Decrypted Password: %s\n", pass);
+
+	// Open Authentication File
+	FILE * fp = fopen(AUTH_FILE, "a+");
+	if (!fp) {
+		fprintf(stderr, "Unable to open Auth File\n");
+		exit(1);
+	}
+
+	// Loop Through File
+	char fline [BUFSIZ];
+	char *fuser; char *fpass;
+	int userFound = 0;
+	while (fgets(fline, sizeof(fline), fp)) {
+		fuser = strtok(fline, "\t");
+		fpass = strtok(NULL, "\n");
+		fprintf(stdout, "FUser: %s; FPass: %s\n");
+		bzero((char *)&fline, sizeof(fline));
+	}
+
+	// Login
+	if (userFound) {
+		
+	// Create Account
+	} else {
+
+	}
+
+	// Send Acknowledgement
+	short ack = 1; ack = htons(ack);
+	if (send(s, &ack, sizeof(ack), 0) < 0) {
+		fprintf(stdout, "Unable to send server public key\n");
+		exit(1);
+	}
+
+	// Receive Client Public Key
+	char ckey [BUFSIZ];
+	if (recv(s, ckey, sizeof(ckey), 0) < 0) {
+		fprintf(stderr, "Unable to get client pubkey\n");
+		exit(1);
+	}
+	
+
+	fclose(fp);
+
+}
 
 typedef struct args args;
 struct args {
@@ -36,20 +111,24 @@ struct args {
 void* client_interaction(void* arguments){
 
 	int len;
-  char username[MAX_LINE] = "";
 	char command[MAX_LINE] = "";
 	args *a = (args*)arguments;
-
+	
 	pthread_mutex_lock(&(a->lock));
   NUM_THREADS++;
 	pthread_mutex_unlock(&(a->lock));
 
-
-	/* Get username */
+	// Receive Client Username
+	char username [BUFSIZ];
 	if(recv(a->s, username, sizeof(username), 0) < 0) {
-		perror("Server Received Error!"); 
+		fprintf(stderr, "Unable to get client username\n");
 		exit(1);
 	}
+	fprintf(stdout, "Username: %s\n", username);
+
+	// Login or Create User
+	client_authenticate(a->s, username);
+
 
 	pthread_mutex_lock(&(a->lock));
 	a->activeUsers.insert(username);

@@ -3,7 +3,7 @@ CFLAGS = -g -Wall -Werror -std=c++11 -I../lib -fPIC
 LD = g++
 LDFLAGS = -L../lib -lcrypto -lz -pthread
 
-all: myserver
+all = myserver
 
 myserver: server.o
 	@echo "Linking $@"
