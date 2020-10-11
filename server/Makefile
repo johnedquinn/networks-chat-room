@@ -1,11 +1,11 @@
 CC = gcc
 CFLAGS = -g -Wall -Werror -std=gnu99 -I../lib -fPIC
 LD = gcc
-LDFLAGS = -L../lib -lcrypto -lz
+LDFLAGS = -L../lib -lcrypto -lz -pthread
 
 all: myserver
 
-myclient:	client.o
+myserver: server.o
 	@echo "Linking $@"
 	$(LD) -o $@ $^ $(LDFLAGS)
 
