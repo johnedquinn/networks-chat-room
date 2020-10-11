@@ -98,20 +98,26 @@ void client_authenticate (int s) {
 
 }
 
+typedef struct args args;
+struct args {
+		int s;
+		pthread_mutex_t lock;
+};
+
 /*
 * @func   client_interaction
 * @desc   thread function for handling user messages
 */
-void* client_interaction(void* arg){
+void* client_interaction(void* arguments){
 
 	int len;
 	char command[MAX_LINE] = "";
-	int client_sock = *(int*)arg;
+	args *a = (args*)arguments;
 
 	/* Loop to get commands */
 	while(1) {
 
-		if((len = recv(client_sock, command, sizeof(command), 0)) == -1) {
+		if((len = recv(a->s, command, sizeof(command), 0)) == -1) {
 			perror("Server Received Error!"); 
 			exit(1);
 		}
@@ -131,7 +137,12 @@ void* client_interaction(void* arg){
 		bzero((char*)command, sizeof(command));
 
 	}
-  return NULL;
+  
+	pthread_mutex_lock(&(a->lock));
+  NUM_THREADS--;
+	pthread_mutex_unlock(&(a->lock));
+
+	return NULL;
 }
 
 /*
@@ -189,6 +200,9 @@ int main(int argc, char* argv[]){
 	socklen_t addr_len = sizeof(client_addr);
 	printf("Waiting for connections on port %d\n", port);
 
+	pthread_mutex_t lock;
+	pthread_mutex_init(&lock, NULL);
+
   while(1) {
 
 		if((client_sock = accept(s, (struct sockaddr *)&client_addr, &addr_len)) < 0){
@@ -203,8 +217,15 @@ int main(int argc, char* argv[]){
 
     // Create new thread for each accepted client
    	pthread_t user_thread;
+		pthread_mutex_lock(&lock);
     NUM_THREADS++;
-    if(pthread_create(&user_thread, NULL, client_interaction, &client_sock) < 0){
+		pthread_mutex_unlock(&lock);
+
+		args *a = (args *) calloc((size_t)1, sizeof(args));
+		a->s = client_sock;
+		a->lock = lock;
+
+    if(pthread_create(&user_thread, NULL, client_interaction, (void*)a) < 0){
       perror("Error creating user thread\n");
       return 1;
     }
