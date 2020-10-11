@@ -107,6 +107,8 @@ int main(int argc, char* argv[]){
 
   }
 
+  printf("Connection established\n>");
+
   while(!EXIT){
 
 		// Perform Log In and Sign Up
