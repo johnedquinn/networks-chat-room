@@ -2,7 +2,7 @@
 Patrick Bald, John Quinn, Rob Reutiman
 pbald, jquin13, rreutima
 */
-
+using namespace std;
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -11,6 +11,8 @@ pbald, jquin13, rreutima
 #include <strings.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <set>
+#include <string>
 
 #include "../lib/pg3lib.h"
 
@@ -27,16 +29,8 @@ char AUTH_FILE [30] = "authfile.txt";
  * --
  * @param  s  socket desc
  */
-void client_authenticate (int s) {
+void client_authenticate (int s, char uname []) {
 	
-	// Receive Client Username
-	char uname [BUFSIZ];
-	if(recv(s, uname, sizeof(uname), 0) < 0) {
-		fprintf(stderr, "Unable to get client username\n");
-		exit(1);
-	}
-	fprintf(stdout, "Username: %s\n", uname);
-
 	// Generate Server Public Key
 	char * skey = getPubKey();
 	fprintf(stdout, "Sending Server Pub Key: %s\n", skey);
@@ -107,6 +101,7 @@ typedef struct args args;
 struct args {
 		int s;
 		pthread_mutex_t lock;
+		set<string> activeUsers;
 };
 
 /*
@@ -118,9 +113,26 @@ void* client_interaction(void* arguments){
 	int len;
 	char command[MAX_LINE] = "";
 	args *a = (args*)arguments;
+	
+	pthread_mutex_lock(&(a->lock));
+  NUM_THREADS++;
+	pthread_mutex_unlock(&(a->lock));
+
+	// Receive Client Username
+	char username [BUFSIZ];
+	if(recv(a->s, username, sizeof(username), 0) < 0) {
+		fprintf(stderr, "Unable to get client username\n");
+		exit(1);
+	}
+	fprintf(stdout, "Username: %s\n", username);
 
 	// Login or Create User
-	client_authenticate(a->s);
+	client_authenticate(a->s, username);
+
+
+	pthread_mutex_lock(&(a->lock));
+	a->activeUsers.insert(username);
+	pthread_mutex_unlock(&(a->lock));
 
 	/* Loop to get commands */
 	while(1) {
@@ -148,6 +160,7 @@ void* client_interaction(void* arguments){
   
 	pthread_mutex_lock(&(a->lock));
   NUM_THREADS--;
+	a->activeUsers.erase(username);
 	pthread_mutex_unlock(&(a->lock));
 
 	return NULL;
@@ -210,6 +223,7 @@ int main(int argc, char* argv[]){
 
 	pthread_mutex_t lock;
 	pthread_mutex_init(&lock, NULL);
+	set<string> activeUsers;
 
   while(1) {
 
@@ -217,21 +231,21 @@ int main(int argc, char* argv[]){
 			perror("myserver: accept"); 
 			exit(1);
 		}
- 
+
+ 		pthread_mutex_lock(&lock);
     if(NUM_THREADS == 10){
       fprintf(stdout, "Connection Refused: Max clients online.\n");
       continue;
     }
+		pthread_mutex_unlock(&lock);
 
     // Create new thread for each accepted client
    	pthread_t user_thread;
-		pthread_mutex_lock(&lock);
-    NUM_THREADS++;
-		pthread_mutex_unlock(&lock);
 
 		args *a = (args *) calloc((size_t)1, sizeof(args));
 		a->s = client_sock;
 		a->lock = lock;
+		a->activeUsers = activeUsers;
 
     if(pthread_create(&user_thread, NULL, client_interaction, (void*)a) < 0){
       perror("Error creating user thread\n");

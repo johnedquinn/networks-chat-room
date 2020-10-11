@@ -48,7 +48,7 @@ void login(int s, char* username){
 
 	
 	// Send Username
-	if (send(s, username, sizeof(username), 0) < 0) {
+	if (send(s, username, strlen(username) + 1, 0) < 0) {
 		fprintf(stdout, "Unable to send username\n");
 		exit(1);
 	}
@@ -59,8 +59,10 @@ void login(int s, char* username){
 		fprintf(stderr, "Unable to Receive Public Key\n");
 		exit(1);
 	}
+	fprintf(stdout, "Received Server Key: %s\n", skey);
 
 	// Get User Password
+	fprintf(stdout, "Password: ");
 	char pass [BUFSIZ];
 	fgets(pass, sizeof(pass), stdin);
 
@@ -68,7 +70,7 @@ void login(int s, char* username){
 	char * epass = encrypt(pass, skey);
 
 	// Send Encrypted Password
-	if (send(s, epass, sizeof(epass), 0) < 0) {
+	if (send(s, epass, strlen(epass) + 1, 0) < 0) {
 		fprintf(stdout, "Unable to send username\n");
 		exit(1);
 	}
@@ -87,7 +89,7 @@ void login(int s, char* username){
 	char * ckey = getPubKey();
 
 	// Send Public Key
-	if (send(s, ckey, sizeof(ckey), 0) < 0) {
+	if (send(s, ckey, strlen(ckey) + 1, 0) < 0) {
 		fprintf(stdout, "Unable to send username\n");
 		exit(1);
 	}
