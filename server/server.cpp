@@ -19,6 +19,84 @@ pbald, jquin13, rreutima
 
 /* GLOBALs */
 int NUM_THREADS = 0;
+char * AUTH_FILE = "authfile.txt"
+
+/*
+ * @func   client_authenticate
+ * @desc   logs in user or creates account
+ * --
+ * @param  s  socket desc
+ */
+void client_authenticate (int s) {
+	
+	// Receive Client Username
+	char uname [BUFSIZ];
+	if(recv(client_sock, uname, sizeof(uname), 0) < 0) {
+		fprintf(stderr, "Unable to get client username\n");
+		exit(1);
+	}
+	printf("Username: %s\n", username);
+
+	// Generate Server Public Key
+	char * skey = getPubKey();
+	
+	// Send Public Key
+	if (send(s, skey, sizeof(skey), 0) < 0) {
+		fprintf(stdout, "Unable to send server public key\n");
+		exit(1);
+	}
+
+	// Receive Client Password
+	if (recv(s, epass, sizeof(epass), 0) < 0) {
+		fprintf(stderr, "Unable to get client username\n");
+		exit(1);
+	}
+
+	// Decrypt Password
+	char * pass = decrypt(epass);
+
+	// Open Authentication File
+	FILE * fp = fopen(AUTH_FILE, "rw");
+	if (!fp) {
+		fprintf(stderr, "Unable to open Auth File\n");
+		exit(1);
+	}
+
+	// Loop Through File
+	char fline [BUFSIZ];
+	char *fuser; char *fpass;
+	while (fgets(fline, sizeof(fline), fp)) {
+		fuser = strtok(fline, "\t");
+		fpass = strtok(NULL, "\n");
+		fprintf(stdout, "FUser: %s; FPass: %s\n");
+		bzero((char *)&fline, sizeof(fline));
+	}
+
+	// Login
+	if (userFound) {
+		
+	// Create Account
+	} else {
+
+	}
+
+	// Send Acknowledgement
+	short ack = 1; ack = htons(ack);
+	if (send(s, ack, sizeof(ack), 0) < 0) {
+		fprintf(stdout, "Unable to send server public key\n");
+		exit(1);
+	}
+
+	// Receive Client Public Key
+	if (recv(s, ckey, sizeof(ckey), 0) < 0) {
+		fprintf(stderr, "Unable to get client pubkey\n");
+		exit(1);
+	}
+	
+
+	fclose(fp);
+
+}
 
 /*
 * @func   client_interaction
@@ -27,17 +105,8 @@ int NUM_THREADS = 0;
 void* client_interaction(void* arg){
 
 	int len;
-  char username[MAX_LINE] = "";
 	char command[MAX_LINE] = "";
 	int client_sock = *(int*)arg;
-
-	/* Get username */
-	if(recv(client_sock, username, sizeof(username), 0) < 0) {
-		perror("Server Received Error!"); 
-		exit(1);
-	}
-
-	printf("Username: %s\n", username);
 
 	/* Loop to get commands */
 	while(1) {
