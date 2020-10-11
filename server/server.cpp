@@ -93,26 +93,26 @@ int main(int argc, char* argv[]){
 	
 	// Set passive option 
 	if((s = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("myftpd: socket");
+		perror("myserver: socket");
 		exit(1);
 	}
 	
 	// Set Socket Option
 	int opt = 1;
 	if((setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(int))) < 0) {
-		perror("myftpd: setsocket"); 
+		perror("myserver: setsocket"); 
 		exit(1);
 	}
 
 	// Bind Socket
 	if((bind(s, (struct sockaddr *) &sin, sizeof(sin))) < 0) {
-		perror("myftpd: bind"); 
+		perror("myserver: bind"); 
 		exit(1);
 	}
 
 	// Listen
 	if((listen(s, MAX_THREAD)) < 0) {
-		perror("myftpd: listen"); 
+		perror("myserver: listen"); 
 		exit(1);
 	} 
 	
@@ -120,15 +120,20 @@ int main(int argc, char* argv[]){
 	socklen_t addr_len = sizeof(client_addr);
 	printf("Waiting for connections on port %d\n", port);
 
-  while((client_sock = accept(s, (struct sockaddr *)&client_addr, &addr_len)) < 0){
-    
+  while(1) {
+
+		if((client_sock = accept(s, (struct sockaddr *)&client_addr, &addr_len)) < 0){
+			perror("myserver: accept"); 
+			exit(1);
+		}
+ 
     if(NUM_THREADS == 10){
       fprintf(stdout, "Connection Refused: Max clients online.\n");
       continue;
     }
 
     // Create new thread for each accepted client
-    pthread_t user_thread;
+   	pthread_t user_thread;
     NUM_THREADS++;
     if(pthread_create(&user_thread, NULL, client_interaction, &client_sock) < 0){
       perror("Error creating user thread\n");
