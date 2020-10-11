@@ -59,6 +59,8 @@ void* client_interaction(void* arg){
 
 		}
 
+		bzero((char*)command, sizeof(command));
+
 	}
   return NULL;
 }
