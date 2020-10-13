@@ -12,6 +12,8 @@ pbald, jquin13, rreutima
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <string>
+#include <iostream>
 
 #include "../lib/pg3lib.h"
 
@@ -26,11 +28,16 @@ int ACTIVE = 1;
 * @desc   thread function for handling user messages
 */
 void* handle_messages(void* arg){
+	int s = *(int*)arg;
 
     while(ACTIVE){
-      //char message[BUFSIZ];
+		char msg[BUFSIZ];
+		if(recv(s, msg, sizeof(msg), 0) < 0){
+			fprintf(stdout, "Error recieving message in client\n");
+		}
 
-      // @todo recv message
+		fprintf(stdout, "Message: %s", msg);
+		fflush(stdout);
 
     }
 
@@ -97,6 +104,60 @@ void login(int s, char* username){
 }
 
 /*
+ * @func Broadcast Message (BM)
+ *
+ * @params s: socket descriptor for server
+ */
+void BM(int s){
+
+	// Send broadcast message to server
+	if (send(s, "BM", 3, 0) < 0) {
+		fprintf(stdout, "Unable to send BM operation\n");
+		exit(1);
+	}
+
+	// recv acknowledgement from server
+	short ack;
+	if (recv(s, &ack, sizeof(ack), 0) < 0) {
+		fprintf(stderr, "Unable to Receive Public Key\n");
+		exit(1);
+	}
+	if (ntohs(ack) < 0) {
+		fprintf(stdout, "Failed BM confirmation\n");
+	}
+
+	// get and send message to server
+	fprintf(stdout, "Enter message: "); fflush(stdout);
+	char msg[BUFSIZ];
+	fgets(msg, BUFSIZ, stdin);
+	
+
+	if(send(s, msg, strlen(msg) + 1, 0) < 0){
+		fprintf(stdout, "Error sending BM message to server\n");
+		exit(1);
+	}
+	
+
+	// recv confirmation
+	if (recv(s, &ack, sizeof(ack), 0) < 0) {
+		fprintf(stderr, "Unable to receive server sent confirmation\n");
+		exit(1);
+	}
+	if (ntohs(ack) < 0) {
+		fprintf(stdout, "Failed BM confirmation\n");
+	}
+
+	
+
+}
+
+typedef struct args args;
+struct args {
+	int s;
+};
+
+
+/*
 * @func   main
 * @desc   main driver, 
 *         main thread to handle user input, server interaction
@@ -156,9 +217,10 @@ int main(int argc, char* argv[]){
 		// Perform Log In and Sign Up
     login(s, username);
 
+
     // Make thread for handling messages
     pthread_t message_thread;
-    int rc = pthread_create(&message_thread, NULL, handle_messages, NULL);
+    int rc = pthread_create(&message_thread, NULL, handle_messages, &s);
 
     while(1){
 
@@ -167,16 +229,18 @@ int main(int argc, char* argv[]){
         exit(-1);
       }
 
-      char option[BUFSIZ];
-      fgets(option, BUFSIZ, stdin);
+      char operation[BUFSIZ];
+      fgets(operation, BUFSIZ, stdin);
 
-      if(!strncmp(option, "p", 1)){
-        //private_message(); // @TODO write this func
-      } else if (!strncmp(option, "b", 1)){
-        //broadcast(); // @TODO write this func
+      if(!strncmp(operation, "PM", 2)){
+			// PM(s);
+      } else if (!strncmp(operation, "BM", 2)){
+        BM(s);
       } else {
-        fprintf(stdout, "Invalid input %s\n", option);
+        fprintf(stdout, "Invalid input %s\n", operation);
       }
+
+		fprintf(stdout, "\n> "); fflush(stdout);
 
     }
 
