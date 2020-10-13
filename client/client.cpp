@@ -13,6 +13,7 @@ pbald, jquin13, rreutima
 #include <netinet/in.h>
 #include <netdb.h>
 #include <string>
+#include <iostream>
 
 #include "../lib/pg3lib.h"
 
@@ -27,10 +28,11 @@ int ACTIVE = 1;
 * @desc   thread function for handling user messages
 */
 void* handle_messages(void* arg){
+	int s = *(int*)arg;
 
     while(ACTIVE){
-      string msg;
-		if(recv(arg.s, msg, sizeof(msg), 0) < 0){
+		char msg[BUFSIZ];
+		if(recv(s, msg, sizeof(msg), 0) < 0){
 			fprintf(stdout, "Error recieving message in client\n");
 		}
 
@@ -126,10 +128,11 @@ void BM(int s){
 
 	// get and send message to server
 	fprintf(stdout, "Enter message: "); fflush(stdout);
-	string msg;
-	getline(cin, msg);
+	char msg[BUFSIZ];
+	fgets(msg, BUFSIZ, stdin);
+	
 
-	if(send(s, msg, msg.length() + 1, 0) < 0){
+	if(send(s, msg, strlen(msg) + 1, 0) < 0){
 		fprintf(stdout, "Error sending BM message to server\n");
 		exit(1);
 	}
@@ -214,12 +217,10 @@ int main(int argc, char* argv[]){
 		// Perform Log In and Sign Up
     login(s, username);
 
-	 args a;
-	 a.s = s;
 
     // Make thread for handling messages
     pthread_t message_thread;
-    int rc = pthread_create(&message_thread, NULL, handle_messages, args);
+    int rc = pthread_create(&message_thread, NULL, handle_messages, &s);
 
     while(1){
 
@@ -231,12 +232,12 @@ int main(int argc, char* argv[]){
       char operation[BUFSIZ];
       fgets(operation, BUFSIZ, stdin);
 
-      if(operation == "PM"){
-			PM(s);
-      } else if (operation == "BM"){
+      if(!strncmp(operation, "PM", 2)){
+			// PM(s);
+      } else if (!strncmp(operation, "BM", 2)){
         BM(s);
       } else {
-        fprintf(stdout, "Invalid input %s\n", option);
+        fprintf(stdout, "Invalid input %s\n", operation);
       }
 
 		fprintf(stdout, "\n> "); fflush(stdout);

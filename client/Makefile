@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -g -Wall -Werror -std=c++11 -I../lib -fPIC
-LD = gcc
+LD = g++
 LDFLAGS = -L../lib -lcrypto -lz -pthread
 
 all = myclient
