@@ -13,6 +13,8 @@ using namespace std;
 #include <netinet/in.h>
 #include <set>
 #include <string>
+#include <iostream>
+#include <fstream>
 
 #include "../lib/pg3lib.h"
 
@@ -30,30 +32,9 @@ char AUTH_FILE [30] = "authfile.txt";
  * @param  s  socket desc
  */
 void client_authenticate (int s, char uname []) {
-	
-	// Generate Server Public Key
-	char * skey = getPubKey();
-	fprintf(stdout, "Sending Server Pub Key: %s\n", skey);
-	
-	// Send Public Key
-	if (send(s, skey, strlen(skey) + 1, 0) < 0) {
-		fprintf(stdout, "Unable to send server public key\n");
-		exit(1);
-	}
-
-	// Receive Client Password
-	char epass [BUFSIZ];
-	if (recv(s, epass, sizeof(epass), 0) < 0) {
-		fprintf(stderr, "Unable to get client username\n");
-		exit(1);
-	}
-
-	// Decrypt Password
-	char * pass = decrypt(epass);
-	fprintf(stdout, "Decrypted Password: %s\n", pass);
 
 	// Open Authentication File
-	FILE * fp = fopen(AUTH_FILE, "a+");
+	FILE * fp = fopen(AUTH_FILE, "r");
 	if (!fp) {
 		fprintf(stderr, "Unable to open Auth File\n");
 		exit(1);
@@ -61,28 +42,78 @@ void client_authenticate (int s, char uname []) {
 
 	// Loop Through File
 	char fline [BUFSIZ];
-	char *fuser; char *fpass;
+	char *fuser = NULL; char *fpass = NULL;
 	int userFound = 0;
 	while (fgets(fline, sizeof(fline), fp)) {
-		fuser = strtok(fline, "\t");
-		fpass = strtok(NULL, "\n");
-		fprintf(stdout, "FUser: %s; FPass: %s\n");
+		fuser = strtok(fline, "\r");
+		if (fuser) fpass = strtok(NULL, "\n");
+		if (!strcmp(fuser, uname)) {
+			userFound = true;
+			break;
+		}
 		bzero((char *)&fline, sizeof(fline));
 	}
+	fclose(fp);
 
-	// Login
+	// Send Acknowledgement (1:Login, 2:AccountCreation)
+	short ack;
 	if (userFound) {
-		
-	// Create Account
+		ack = htons(1);
+		if (send(s, &ack, sizeof(ack), 0) < 0) {
+			fprintf(stdout, "Unable to send ack\n");
+			exit(1);
+		}
 	} else {
-
+		ack = htons(2);
+		if (send(s, &ack, sizeof(ack), 0) < 0) {
+			fprintf(stdout, "Unable to send ack\n");
+			exit(1);
+		}
 	}
-
-	// Send Acknowledgement
-	short ack = 1; ack = htons(ack);
-	if (send(s, &ack, sizeof(ack), 0) < 0) {
+	
+	// Generate Server Public Key
+	char * skey = getPubKey();
+	
+	// Send Public Key
+	if (send(s, skey, strlen(skey) + 1, 0) < 0) {
 		fprintf(stdout, "Unable to send server public key\n");
 		exit(1);
+	}
+
+	ack = 2;
+	while (ack != 1) {
+
+		// Receive Client Password
+		char epass [BUFSIZ];
+		if (recv(s, epass, sizeof(epass), 0) < 0) {
+			fprintf(stderr, "Unable to get client username\n");
+			exit(1);
+		}
+
+		// Decrypt Password
+		char * pass = decrypt(epass);
+		if (pass[strlen(pass)-1] == '\n') pass[strlen(pass)-1] = '\0';
+
+		// Login
+		if (userFound) {
+			if (!strcmp(fpass, pass)) ack = 1;
+			else ack = 2;
+		
+		// Create Account
+		} else {
+			ofstream out;
+			out.open(AUTH_FILE, std::ios::app);
+			out << uname << "\r" << pass << "\n";
+			out.close();
+			ack = 1;
+		}
+
+		// Send Acknowledgement
+		short tack = htons(ack);
+		if (send(s, &tack, sizeof(tack), 0) < 0) {
+			fprintf(stdout, "Unable to send server public key\n");
+			exit(1);
+		}
 	}
 
 	// Receive Client Public Key
@@ -93,7 +124,6 @@ void client_authenticate (int s, char uname []) {
 	}
 	
 
-	fclose(fp);
 
 }
 
@@ -124,11 +154,9 @@ void* client_interaction(void* arguments){
 		fprintf(stderr, "Unable to get client username\n");
 		exit(1);
 	}
-	fprintf(stdout, "Username: %s\n", username);
 
 	// Login or Create User
 	client_authenticate(a->s, username);
-
 
 	pthread_mutex_lock(&(a->lock));
 	a->activeUsers.insert(username);

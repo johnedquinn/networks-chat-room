@@ -46,31 +46,8 @@ void* handle_messages(void* arg){
  */
 void login(int s, char* username){
 
-	
 	// Send Username
 	if (send(s, username, strlen(username) + 1, 0) < 0) {
-		fprintf(stdout, "Unable to send username\n");
-		exit(1);
-	}
-
-	// Receive Server Public Key
-	char skey [BUFSIZ];
-	if (recv(s, skey, sizeof(skey), 0) < 0) {
-		fprintf(stderr, "Unable to Receive Public Key\n");
-		exit(1);
-	}
-	fprintf(stdout, "Received Server Key: %s\n", skey);
-
-	// Get User Password
-	fprintf(stdout, "Password: ");
-	char pass [BUFSIZ];
-	fgets(pass, sizeof(pass), stdin);
-
-	// Encrypt Password
-	char * epass = encrypt(pass, skey);
-
-	// Send Encrypted Password
-	if (send(s, epass, strlen(epass) + 1, 0) < 0) {
 		fprintf(stdout, "Unable to send username\n");
 		exit(1);
 	}
@@ -81,9 +58,48 @@ void login(int s, char* username){
 		fprintf(stderr, "Unable to Receive Public Key\n");
 		exit(1);
 	}
-	if (ntohs(ack) < 0) {
-		fprintf(stdout, "Unable to Login or Create Account");
+	if (ntohs(ack) == 1) fprintf(stdout, "Existing User\n");
+	else fprintf(stdout, "Creating New User\n");
+	
+
+	// Receive Server Public Key
+	char skey [BUFSIZ];
+	if (recv(s, skey, sizeof(skey), 0) < 0) {
+		fprintf(stderr, "Unable to Receive Public Key\n");
+		exit(1);
 	}
+
+	// Attempt Password Send
+	ack = 2;
+	while (ack != 1) {
+
+		// Get User Password
+		fprintf(stdout, "Password: ");
+		char pass [BUFSIZ];
+		fgets(pass, sizeof(pass), stdin);
+
+		// Encrypt Password
+		char * epass = encrypt(pass, skey);
+
+		// Send Encrypted Password
+		if (send(s, epass, strlen(epass) + 1, 0) < 0) {
+			fprintf(stdout, "Unable to send username\n");
+			exit(1);
+		}
+
+		// Receive Acknowledgement
+		if (recv(s, &ack, sizeof(ack), 0) < 0) {
+			fprintf(stderr, "Unable to Receive Public Key\n");
+			exit(1);
+		}
+		ack = ntohs(ack);
+		if (ack > 1) {
+			fprintf(stdout, "Incorrect Password. Please Try Again.\n");
+		}
+	}
+
+	// Print Success
+	fprintf(stdout, "Connection Established\n");
 	
 	// Generate Client Public Key
 	char * ckey = getPubKey();
@@ -117,7 +133,6 @@ int main(int argc, char* argv[]){
   /* Variables */
   struct hostent *hp;
   struct sockaddr_in sin;
-  //char buf[MAX_LINE];
   int s;
 
   /* Translate host name into peer's IP address */
@@ -148,8 +163,6 @@ int main(int argc, char* argv[]){
     exit(1);
 
   }
-
-  printf("Connection established\n>");
 
   while(!EXIT){
 
