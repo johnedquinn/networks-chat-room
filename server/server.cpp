@@ -181,6 +181,26 @@ void pm(args *a) {
 
 
 /*
+* @func   cleanup
+* @desc   closes socket, updates activeUsers
+* --
+* @param  a
+*/
+void cleanup(args * a, string uname) {
+
+	// Close Socket
+	close(a->s);
+
+	// Update Active Users
+	pthread_mutex_lock(&(a->lock));
+	a->activeUsers->erase(uname);
+  NUM_THREADS--;
+	pthread_mutex_unlock(&(a->lock));
+	
+}
+
+
+/*
 * @func   client_interaction
 * @desc   thread function for handling user messages
 */
@@ -226,18 +246,14 @@ void* client_interaction(void* arguments){
 		} else if(!strncmp(command, "PM", 2)) {
 			pm(a);
 		} else if(!strncmp(command, "EX", 2)) {
-
+			cleanup(a, uname);
+			break;
 		}
 
 		bzero((char*)command, sizeof(command));
 
 	}
   
-	pthread_mutex_lock(&(a->lock));
-  NUM_THREADS--;
-	a->activeUsers->erase(uname);
-	pthread_mutex_unlock(&(a->lock));
-
 	return NULL;
 }
 
