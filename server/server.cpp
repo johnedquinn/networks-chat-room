@@ -262,16 +262,18 @@ void bm(args* a){
 * --
 * @param  a
 */
-void cleanup(args * a, string uname) {
+void cleanup(args * a) {
 
 	// Close Socket
 	close(a->s);
 
 	// Update Active Users
 	pthread_mutex_lock(&(a->lock));
-	a->activeUsers->erase(uname);
+	a->activeUsers->erase(a->username);
   NUM_THREADS--;
 	pthread_mutex_unlock(&(a->lock));
+
+	free(a->username);
 	
 }
 
@@ -322,7 +324,7 @@ void* client_interaction(void* arguments){
 		} else if(!strncmp(command, "PM", 2)) {
 			pm(a);
 		} else if(!strncmp(command, "EX", 2)) {
-			cleanup(a, uname);
+			cleanup(a);
 			break;
 		}
 
