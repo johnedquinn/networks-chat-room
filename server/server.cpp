@@ -194,9 +194,9 @@ void bm(args* a){
 
 	// send acknowledgement for bm
 	// short ack = 1;
-	char bm_ack[8] = "recv_BM";
+	char bm_ack[9] = "recv_BM";
 	// short converted_ack = htons(ack);
-	if(send(a->s, bm_ack, sizeof(bm_ack), 0) < 0){
+	if(send(a->s, bm_ack, strlen(bm_ack) + 1, 0) < 0){
 		fprintf(stdout, "Error sending bm acknowledgement\n");
 	}
 
