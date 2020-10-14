@@ -330,6 +330,10 @@ int main(int argc, char* argv[]){
 			}
 
 			pthread_join(message_thread, &tstatus);
+			if(pthread_create(&message_thread, NULL, handle_messages, &s) > 0){
+				fprintf(stderr, "Unable to restart thread in BM\n");
+				exit(-1);
+			}
 
 			// cout << "BM brd ack: " << (char*) tstatus << endl;
 

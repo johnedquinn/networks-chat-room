@@ -13,5 +13,5 @@ myserver: server.o
 	@echo "Compiling $@"
 	$(CC) $(CFLAGS) -c -o $@ $<
 clean:
-	@echo "Cleaning...
+	@echo "Cleaning..."
 	rm -f $(all) *.o *.a
