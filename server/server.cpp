@@ -2,7 +2,6 @@
 Patrick Bald, John Quinn, Rob Reutiman
 pbald, jquin13, rreutima
 */
-using namespace std;
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -15,8 +14,11 @@ using namespace std;
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <utility>
 
 #include "../lib/pg3lib.h"
+
+using namespace std;
 
 #define MAX_LINE 4096
 #define MAX_THREAD 10
@@ -31,7 +33,7 @@ char AUTH_FILE [30] = "authfile.txt";
  * --
  * @param  s  socket desc
  */
-void client_authenticate (int s, char uname []) {
+string client_authenticate (int s, char uname []) {
 
 	// Open Authentication File
 	FILE * fp = fopen(AUTH_FILE, "r");
@@ -123,7 +125,8 @@ void client_authenticate (int s, char uname []) {
 		exit(1);
 	}
 	
-
+	string cpub(ckey);
+	return cpub;
 
 }
 
@@ -131,7 +134,7 @@ typedef struct args args;
 struct args {
 		int s;
 		pthread_mutex_t lock;
-		map<string, pair<int, string> > activeUsers;
+		map<string, pair<int, string> > * activeUsers;
 };
 
 /*
@@ -197,12 +200,13 @@ void* client_interaction(void* arguments){
 		fprintf(stderr, "Unable to get client username\n");
 		exit(1);
 	}
+	string uname(username);
 
 	// Login or Create User
-	client_authenticate(a->s, username);
+	string cpub = client_authenticate(a->s, username);
 
 	pthread_mutex_lock(&(a->lock));
-	a->activeUsers.insert(username);
+	a->activeUsers->insert(pair<string, pair<int, string> >(uname, pair<int, string> (a->s, cpub)));
 	pthread_mutex_unlock(&(a->lock));
 
 	/* Loop to get commands */
@@ -231,7 +235,7 @@ void* client_interaction(void* arguments){
   
 	pthread_mutex_lock(&(a->lock));
   NUM_THREADS--;
-	a->activeUsers.erase(username);
+	a->activeUsers->erase(uname);
 	pthread_mutex_unlock(&(a->lock));
 
 	return NULL;
@@ -316,12 +320,14 @@ int main(int argc, char* argv[]){
 		args *a = (args *) calloc((size_t)1, sizeof(args));
 		a->s = client_sock;
 		a->lock = lock;
-		a->activeUsers = activeUsers;
+		a->activeUsers = &activeUsers;
 
     if(pthread_create(&user_thread, NULL, client_interaction, (void*)a) < 0){
       perror("Error creating user thread\n");
       return 1;
     }
+
+		cout << "ACTIVE USERS COUNT:" << activeUsers.size() <<  endl;
 
   }
 
