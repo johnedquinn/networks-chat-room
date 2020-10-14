@@ -201,12 +201,10 @@ void pm(args *a) {
 
 void bm(args* a){
 
-	fprintf(stdout, " Running bm func\n");
+	// fprintf(stdout, " Running bm func\n");
 
 	// send acknowledgement for bm
-	// short ack = 1;
-	char bm_ack[9] = "recv_BM";
-	// short converted_ack = htons(ack);
+	char bm_ack[11] = "bm_cmd_ack";
 	if(send(a->s, bm_ack, strlen(bm_ack) + 1, 0) < 0){
 		fprintf(stdout, "Error sending bm acknowledgement\n");
 	}
@@ -217,18 +215,29 @@ void bm(args* a){
 		fprintf(stdout, "Error recieving bm message\n");
 	}
 
+	string msg(buf);
+	msg = "\r0" + msg;
+
 	// send message to all active users
 	
 	for ( auto user : *(a->activeUsers)){
 
-		fprintf(stdout, "iterating through users\n");
-		fprintf(stdout, "socket descriptor: %d\n", user.second.first);
+		// fprintf(stdout, "iterating through users\n");
+		// fprintf(stdout, "socket descriptor: %d\n", user.second.first);
 
-		// send(user.second.first); 
+		if(user.second.first == a->s) continue;
+
+		if(send(user.second.first, msg.c_str(), strlen(msg.c_str()) + 1, 0) < 0){
+			fprintf(stderr, "Error broadcasting message\n");
+		}
 
 	}
 
-	// send confirmation to client that message was sent
+	// send acknowledgement for bm broadcast
+	char bm_broadcast_ack[11] = "bm_brd_ack";
+	if(send(a->s, bm_broadcast_ack, strlen(bm_broadcast_ack) + 1, 0) < 0){
+		fprintf(stdout, "Error sending bm broadcast acknowledgement\n");
+	}
 
 }
 
