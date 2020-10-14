@@ -127,7 +127,8 @@ void login(int s, char* username){
 void BM(int s){
 
 	// Send broadcast message to server
-	if (send(s, "BM", 3, 0) < 0) {
+	char cmd[3] = "BM";
+	if (send(s, cmd, strlen(cmd) + 1, 0) < 0) {
 		fprintf(stdout, "Unable to send BM operation\n");
 		exit(1);
 	}
@@ -140,6 +141,7 @@ void BM(int s){
 	}
 	if (ntohs(ack) < 0) {
 		fprintf(stdout, "Failed BM confirmation\n");
+		return;
 	}
 
 	// get and send message to server

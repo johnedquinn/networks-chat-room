@@ -179,6 +179,39 @@ void pm(args *a) {
 
 }
 
+void bm(args* a){
+
+	fprintf(stdout, " Running bm func\n");
+
+	// send acknowledgement for bm
+	// short ack = 1;
+	char bm_ack[8] = "recv_BM";
+	// short converted_ack = htons(ack);
+	if(send(a->s, bm_ack, sizeof(bm_ack), 0) < 0){
+		fprintf(stdout, "Error sending bm acknowledgement\n");
+	}
+
+	// get message
+	char buf[BUFSIZ];
+	if(recv(a->s, buf, sizeof(buf), 0) < 0){
+		fprintf(stdout, "Error recieving bm message\n");
+	}
+
+	// send message to all active users
+	
+	for ( auto user : *(a->activeUsers)){
+
+		fprintf(stdout, "iterating through users\n");
+		fprintf(stdout, "socket descriptor: %d\n", user.second.first);
+
+		// send(user.second.first); 
+
+	}
+
+	// send confirmation to client that message was sent
+
+}
+
 
 /*
 * @func   cleanup
@@ -242,7 +275,7 @@ void* client_interaction(void* arguments){
 
 		/* Command specific functions */
 		if(!strncmp(command, "BM", 2)) {
-
+			bm(a);
 		} else if(!strncmp(command, "PM", 2)) {
 			pm(a);
 		} else if(!strncmp(command, "EX", 2)) {
