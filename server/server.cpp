@@ -20,7 +20,6 @@ pbald, jquin13, rreutima
 
 using namespace std;
 
-#define MAX_LINE 4096
 #define MAX_THREAD 10
 
 /* GLOBALs */
@@ -144,13 +143,23 @@ struct args {
 
 void pm(args *a) {
 
-	char target[MAX_LINE] = "";
+	char target[BUFSIZ] = "";
 
 	/* Send list of active users */
+	string names = "";
+	for(auto &key: *(a->activeUsers))
+		    names.append(key.first + "\n");
+
+	cout << names;
+
+	if(send(a->s, names.c_str(), names.length() + 1, 0) < 0) {
+		perror("Error sending client list."); 
+		exit(1);
+	}
 
 	/* Recieve username of target user */
 	if(recv(a->s, target, sizeof(target), 0) < 0) {
-		perror("Server Received Error!"); 
+		perror("Error receiving username."); 
 		exit(1);
 	}
 
@@ -187,7 +196,7 @@ void pm(args *a) {
 void* client_interaction(void* arguments){
 
 	int len;
-	char command[MAX_LINE] = "";
+	char command[BUFSIZ] = "";
 	args *a = (args*)arguments;
 	
 	pthread_mutex_lock(&(a->lock));

@@ -163,6 +163,53 @@ void BM(int s){
 		fprintf(stdout, "Failed BM confirmation\n");
 	}
 
+}
+
+/*
+ * @func Private Message (PM)
+ *
+ * @params s: socket descriptor for server
+ */
+void PM(int s){
+
+	// Send private message to server
+	char cmd[2] = "PM";
+	if (send(s, cmd, 3, 0) < 0) {
+		fprintf(stderr, "Unable to send BM operation\n");
+		exit(1);
+	}
+
+	// recv client list from server
+	char clientList[BUFSIZ] = "";
+	if(recv(s, clientList, sizeof(clientList), 0) < 0) {
+		fprintf(stderr, "Unable to send BM operation\n");
+		exit(1);
+	}
+
+	fprintf(stdout, "%s", clientList);
+	fflush(stdout);
+
+	// get and send message to server
+	fprintf(stderr, "Enter message: "); fflush(stdout);
+	char msg[BUFSIZ];
+	fgets(msg, BUFSIZ, stdin);
+	
+
+	if(send(s, msg, strlen(msg) + 1, 0) < 0){
+		fprintf(stderr, "Error sending BM message to server\n");
+		exit(1);
+	}
+	
+
+	// recv confirmation
+	if (recv(s, &ack, sizeof(ack), 0) < 0) {
+		fprintf(stderr, "Unable to receive server sent confirmation\n");
+		exit(1);
+	}
+	if (ntohs(ack) < 0) {
+		fprintf(stdout, "Failed BM confirmation\n");
+	}
+
 	
 
 }
@@ -246,7 +293,7 @@ int main(int argc, char* argv[]){
       fgets(operation, BUFSIZ, stdin);
 
       if(!strncmp(operation, "PM", 2)){
-			// PM(s);
+			  PM(s);
       } else if (!strncmp(operation, "BM", 2)){
         BM(s);
       } else {
