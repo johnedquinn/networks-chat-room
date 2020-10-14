@@ -38,13 +38,13 @@ void* handle_messages(void* arg){
 			}
 
 			if(msg[0] == '\r') {
-				if(msg[1] == 0){
+				if(msg[1] == '0'){
 					cout << "New public message!" << endl;
 					string m(msg);
 					m.erase(0, 2);
 					cout << m << endl;
 					
-				} else if (msg[1] == 1){
+				} else if (msg[1] == '1'){
 					cout << "New private message!" << endl;
 					string m(msg);
 					m.erase(0, 2);
