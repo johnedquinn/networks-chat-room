@@ -1,3 +1,3 @@
 *.o
-server/myserver
-client/myclient
+server/chatserver
+client/chatclient

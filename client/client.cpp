@@ -41,17 +41,19 @@ void* handle_messages(void* arg){
 				/* Data Message */
 				string m(msg);
 				if(msg[1] == '0') {
-					cout << "\n***** New public message *****" << endl;
+					cout << "\n**** Incoming public message ****: " << endl;
 					m.erase(0,2);
 					cout << m;
-					cout << "(PM / BM / EX) > "; fflush(stdout);
+  				fprintf(stdout, "> Please enter a command (BM: Broadcast Messaging, PM: Private Messaging,  EX: Exit)\n> ");
+					fflush(stdout);
 				} else if (msg[1] == '1') {
-					cout << "\n***** New private message *****" << endl;
+					cout << "\n**** Incoming private message ****: " << endl;
 					m.erase(0,2);
 					char* finalMessage = strdup(m.c_str());
 					cout << decrypt(finalMessage);
 					free(finalMessage);
-					cout << "(PM / BM / EX) > "; fflush(stdout);
+  				fprintf(stdout, "> Please enter a command (BM: Broadcast Messaging, PM: Private Messaging,  EX: Exit)\n> ");
+					fflush(stdout);
 				}
 			} else {
 				return (void *) strdup(msg);
@@ -99,7 +101,7 @@ void login(int s, char* username){
 	while (ack != 1) {
 
 		// Get User Password
-		fprintf(stdout, "Password: ");
+		fprintf(stdout, "Enter password: ");
 		char pass [BUFSIZ];
 		fgets(pass, sizeof(pass), stdin);
 
@@ -208,7 +210,8 @@ int main(int argc, char* argv[]){
 		exit(-1);
 	}
 
-  fprintf(stdout, "(BM / PM / EX) > "); fflush(stdout);
+  fprintf(stdout, "> Please enter a command (BM: Broadcast Messaging, PM: Private Messaging,  EX: Exit)\n> ");
+ 	fflush(stdout);
 
   while(1){
 
@@ -226,27 +229,53 @@ int main(int argc, char* argv[]){
 
 
 		/* Get client list from server */
-		void *clientList;
+		void* clientList;
 		pthread_join(message_thread, &clientList);
  		rc = pthread_create(&message_thread, NULL, handle_messages, &s);
 		if(rc) {
 			fprintf(stdout, "Error: unable to create thread\n");
 			exit(-1);
 		}
-		cout << "Clients online: " << endl;
-		cout << (char *) clientList;
-		free(clientList);
+		string cl((char *) clientList);
+		cout << "Peers online: " << endl;
+		cout << cl;
 
-		// Send target to server
+		// Send target to server once verified as online
 		char target[BUFSIZ] = "";
 		char message[BUFSIZ] = "";
-		cout << "Client target: "; fflush(stdout);
-		fgets(target, BUFSIZ, stdin);
+
+		cout << "Peer to message: "; fflush(stdout);
+
+		int invalidTarget = 1;
+		while(invalidTarget) {
+			fgets(target, BUFSIZ, stdin);
+
+			char * cl2 = strdup((char *) clientList);
+			char *t = strtok(target, "\n");
+			char *token = strtok((char*) cl2, "\n");
+
+			while (token != NULL) {
+				if(!strcmp(token, t)) {
+					invalidTarget = 0;
+					break;
+				}
+				token = strtok(NULL, "\n"); 
+			}
+
+			free(cl2);
+			if(invalidTarget) {
+				cout << "Invalid user. Please enter again: ";
+				fflush(stdout);
+			}
+
+		}
 
 		if(send(s, target, strlen(target) + 1, 0) < 0) {
 			fprintf(stderr, "Unable to send BM operation\n");
 			exit(1);
 		}
+
+		free(clientList);
 
 		/* Get user public key from server */
 		void *targetPubKey;
@@ -278,8 +307,6 @@ int main(int argc, char* argv[]){
 			exit(-1);
 		}
 		cout << (char *) confirmation << endl;
-		/* @TODO: Handle confirmation */
-
 		free(confirmation);
 
     } else if (!strncmp(operation, "BM", 2)){
@@ -340,7 +367,8 @@ int main(int argc, char* argv[]){
       fprintf(stdout, "Invalid input %s\n", operation);
     }
 
-		fprintf(stdout, "(BM / PM /EX) > "); fflush(stdout);
+ 		fprintf(stdout, "> Please enter a command (BM: Broadcast Messaging, PM: Private Messaging,  EX: Exit)\n> ");
+		fflush(stdout);
   }
 
 	pthread_join(message_thread, NULL);
