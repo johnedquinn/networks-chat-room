@@ -38,19 +38,19 @@ void* handle_messages(void* arg){
 			}
 
 			if(msg[0] == '\r') {
-				if(msg[1] == '0'){
+				/* Data Message */
+				string m(msg);
+				if(msg[1] == '0') {
 					cout << "New public message!" << endl;
-					string m(msg);
-					m.erase(0, 2);
+					m.erase(0,2);
 					cout << m << endl;
-					
-				} else if (msg[1] == '1'){
+				} else if (msg[1] == '1') {
 					cout << "New private message!" << endl;
-					string m(msg);
-					m.erase(0, 2);
-					cout << m << endl;
+					m.erase(0,2);
+					char* finalMessage = strdup(m.c_str());
+					cout << decrypt(finalMessage) << endl;
+					free(finalMessage);
 				}
-
 			} else {
 				return (void *) strdup(msg);
 			}
@@ -143,23 +143,6 @@ void login(int s, char* username){
  */
 void PM(int s){
 
-	// Send private message to server
-	char cmd[3] = "PM";
-	if (send(s, cmd, 3, 0) < 0) {
-		fprintf(stderr, "Unable to send BM operation\n");
-		exit(1);
-	}
-
-	// recv client list from server
-	char clientList[BUFSIZ] = "";
-	if(recv(s, clientList, sizeof(clientList), 0) < 0) {
-		fprintf(stderr, "Unable to send BM operation\n");
-		exit(1);
-	}
-
-	fprintf(stdout, "%s", clientList);
-	fflush(stdout);
-
 
 
 	
@@ -230,21 +213,86 @@ int main(int argc, char* argv[]){
   // Make thread for handling messages
   pthread_t message_thread;
   int rc = pthread_create(&message_thread, NULL, handle_messages, &s);
+	if(rc) {
+		fprintf(stdout, "Error: unable to create thread\n");
+		exit(-1);
+	}
 
   fprintf(stdout, "(BM / PM / EX) > "); fflush(stdout);
 
   while(1){
 
-  	if(rc){
-      fprintf(stdout, "Error: unable to create thread\n");
-      exit(-1);
-    }
-
     char operation[BUFSIZ];
     fgets(operation, BUFSIZ, stdin);
 
     if(!strncmp(operation, "PM", 2)){
-			PM(s);
+			//PM(s);
+
+
+		// Send private message to server
+		char cmd[3] = "PM";
+		if (send(s, cmd, 3, 0) < 0) {
+			fprintf(stderr, "Unable to send BM operation\n");
+			exit(1);
+		}
+
+
+		/* Get client list from server */
+		void *clientList;
+		pthread_join(message_thread, &clientList);
+ 		rc = pthread_create(&message_thread, NULL, handle_messages, &s);
+		if(rc) {
+			fprintf(stdout, "Error: unable to create thread\n");
+			exit(-1);
+		}
+		cout << (char *) clientList;
+		free(clientList);
+
+		// Send target to server
+		char target[BUFSIZ] = "";
+		char message[BUFSIZ] = "";
+
+		fgets(target, BUFSIZ, stdin);
+
+		if(send(s, target, strlen(target) + 1, 0) < 0) {
+			fprintf(stderr, "Unable to send BM operation\n");
+			exit(1);
+		}
+
+		/* Get user public key from server */
+		void *targetPubKey;
+		pthread_join(message_thread, &targetPubKey);
+ 		rc = pthread_create(&message_thread, NULL, handle_messages, &s);
+		if(rc) {
+			fprintf(stdout, "Error: unable to create thread\n");
+			exit(-1);
+		}
+
+		/* Get user message, encrypt and send */
+		cout << "Insert Message" << endl;
+		fgets(message, BUFSIZ, stdin);
+
+		char* m = encrypt(message, (char*) targetPubKey);
+		free(targetPubKey);
+
+		if(send(s, m, strlen(m) + 1, 0) < 0) {
+			fprintf(stderr, "Unable to send BM operation\n");
+			exit(1);
+		}
+
+		/* Recieve confirmation of success or failure */
+		void *confirmation;
+		pthread_join(message_thread, &confirmation);
+ 		rc = pthread_create(&message_thread, NULL, handle_messages, &s);
+		if(rc) {
+			fprintf(stdout, "Error: unable to create thread\n");
+			exit(-1);
+		}
+		cout << (char *) confirmation << endl;
+		/* @TODO: Handle confirmation */
+
+		free(confirmation);
+
     } else if (!strncmp(operation, "BM", 2)){
 
 			// Send broadcast message to server
