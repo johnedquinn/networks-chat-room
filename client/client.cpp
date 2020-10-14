@@ -127,7 +127,8 @@ void login(int s, char* username){
 void BM(int s){
 
 	// Send broadcast message to server
-	if (send(s, "BM", 3, 0) < 0) {
+	char cmd[3] = "BM";
+	if (send(s, cmd, strlen(cmd) + 1, 0) < 0) {
 		fprintf(stdout, "Unable to send BM operation\n");
 		exit(1);
 	}
@@ -140,6 +141,7 @@ void BM(int s){
 	}
 	if (ntohs(ack) < 0) {
 		fprintf(stdout, "Failed BM confirmation\n");
+		return;
 	}
 
 	// get and send message to server
@@ -211,7 +213,6 @@ void PM(int s){
 	}
 
 	
-
 }
 
 typedef struct args args;
@@ -272,42 +273,37 @@ int main(int argc, char* argv[]){
 
   }
 
-  while(!EXIT){
-
-		// Perform Log In and Sign Up
-    login(s, username);
+	// Perform Log In and Sign Up
+  login(s, username);
 
 
-    // Make thread for handling messages
-    pthread_t message_thread;
-    int rc = pthread_create(&message_thread, NULL, handle_messages, &s);
+  // Make thread for handling messages
+  pthread_t message_thread;
+  int rc = pthread_create(&message_thread, NULL, handle_messages, &s);
 
-    while(1){
+  while(1){
 
-      if(rc){
-        fprintf(stdout, "Error: unable to create thread\n");
-        exit(-1);
-      }
-
-      char operation[BUFSIZ];
-      fgets(operation, BUFSIZ, stdin);
-
-      if(!strncmp(operation, "PM", 2)){
-			  PM(s);
-      } else if (!strncmp(operation, "BM", 2)){
-        BM(s);
-      } else {
-        fprintf(stdout, "Invalid input %s\n", operation);
-      }
-
-		fprintf(stdout, "\n> "); fflush(stdout);
-
+  	if(rc){
+      fprintf(stdout, "Error: unable to create thread\n");
+      exit(-1);
     }
 
-    close(s);
+    char operation[BUFSIZ];
+    fgets(operation, BUFSIZ, stdin);
 
+    if(!strncmp(operation, "PM", 2)){
+    } else if (!strncmp(operation, "BM", 2)){
+      BM(s);
+    } else if (!strncmp(operation, "EX", 2)){
+			break;
+    } else {
+      fprintf(stdout, "Invalid input %s\n", operation);
+    }
+
+		fprintf(stdout, "\n> "); fflush(stdout);
   }
 
+  close(s);
 
   return 0;
 }
