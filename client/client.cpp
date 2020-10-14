@@ -2,7 +2,7 @@
 Patrick Bald, John Quinn, Rob Reutiman
 pbald, jquin13, rreutima
 */
-
+using namespace std;
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -31,13 +31,21 @@ void* handle_messages(void* arg){
 	int s = *(int*)arg;
 
     while(ACTIVE){
-		char msg[BUFSIZ];
-		if(recv(s, msg, sizeof(msg), 0) < 0){
-			fprintf(stdout, "Error recieving message in client\n");
-		}
+			char msg[BUFSIZ];
 
-		fprintf(stdout, "Message: %s", msg);
-		fflush(stdout);
+			if(recv(s, msg, sizeof(msg), 0) < 0){
+				fprintf(stdout, "Error recieving message in client\n");
+			}
+
+			if(msg[0] == '\r') {
+				/* Data Message */
+				cout << "New message recieved!" << endl;
+				//m.erase(0, 1);
+				cout << msg << endl;
+			} else {
+				//return (void *) &m[0];
+				return (void *) strdup(msg);
+			}
 
     }
 
@@ -126,44 +134,6 @@ void login(int s, char* username){
  */
 void BM(int s){
 
-	// Send broadcast message to server
-	char cmd[3] = "BM";
-	if (send(s, cmd, strlen(cmd) + 1, 0) < 0) {
-		fprintf(stdout, "Unable to send BM operation\n");
-		exit(1);
-	}
-
-	// recv acknowledgement from server
-	short ack;
-	if (recv(s, &ack, sizeof(ack), 0) < 0) {
-		fprintf(stderr, "Unable to Receive Public Key\n");
-		exit(1);
-	}
-	if (ntohs(ack) < 0) {
-		fprintf(stdout, "Failed BM confirmation\n");
-		return;
-	}
-
-	// get and send message to server
-	fprintf(stdout, "Enter message: "); fflush(stdout);
-	char msg[BUFSIZ];
-	fgets(msg, BUFSIZ, stdin);
-	
-
-	if(send(s, msg, strlen(msg) + 1, 0) < 0){
-		fprintf(stdout, "Error sending BM message to server\n");
-		exit(1);
-	}
-	
-
-	// recv confirmation
-	if (recv(s, &ack, sizeof(ack), 0) < 0) {
-		fprintf(stderr, "Unable to receive server sent confirmation\n");
-		exit(1);
-	}
-	if (ntohs(ack) < 0) {
-		fprintf(stdout, "Failed BM confirmation\n");
-	}
 
 }
 
@@ -175,7 +145,7 @@ void BM(int s){
 void PM(int s){
 
 	// Send private message to server
-	char cmd[2] = "PM";
+	char cmd[3] = "PM";
 	if (send(s, cmd, 3, 0) < 0) {
 		fprintf(stderr, "Unable to send BM operation\n");
 		exit(1);
@@ -191,26 +161,7 @@ void PM(int s){
 	fprintf(stdout, "%s", clientList);
 	fflush(stdout);
 
-	// get and send message to server
-	fprintf(stderr, "Enter message: "); fflush(stdout);
-	char msg[BUFSIZ];
-	fgets(msg, BUFSIZ, stdin);
-	
 
-	if(send(s, msg, strlen(msg) + 1, 0) < 0){
-		fprintf(stderr, "Error sending BM message to server\n");
-		exit(1);
-	}
-	
-
-	// recv confirmation
-	if (recv(s, &ack, sizeof(ack), 0) < 0) {
-		fprintf(stderr, "Unable to receive server sent confirmation\n");
-		exit(1);
-	}
-	if (ntohs(ack) < 0) {
-		fprintf(stdout, "Failed BM confirmation\n");
-	}
 
 	
 }
@@ -292,8 +243,56 @@ int main(int argc, char* argv[]){
     fgets(operation, BUFSIZ, stdin);
 
     if(!strncmp(operation, "PM", 2)){
+			PM(s);
     } else if (!strncmp(operation, "BM", 2)){
-      BM(s);
+      //BM(s);
+
+			// Send broadcast message to server
+			char cmd[3] = "BM";
+			if (send(s, cmd, strlen(cmd) + 1, 0) < 0) {
+				fprintf(stdout, "Unable to send BM operation\n");
+				exit(1);
+			}
+
+			// recv acknowledgement from server
+			void *tstatus;
+			pthread_join(message_thread, &tstatus);
+
+			cout << (char *) tstatus << endl;
+
+			/* @TODO: Free it doe */
+	
+			short ack;
+			if (recv(s, &ack, sizeof(ack), 0) < 0) {
+				fprintf(stderr, "Unable to Receive Public Key\n");
+				exit(1);
+			}
+			if (ntohs(ack) < 0) {
+				fprintf(stdout, "Failed BM confirmation\n");
+				exit(-1);
+			}
+
+	// get and send message to server
+	fprintf(stdout, "Enter message: "); fflush(stdout);
+	char msg[BUFSIZ];
+	fgets(msg, BUFSIZ, stdin);
+	
+
+	if(send(s, msg, strlen(msg) + 1, 0) < 0){
+		fprintf(stdout, "Error sending BM message to server\n");
+		exit(1);
+	}
+	
+
+	// recv confirmation
+	if (recv(s, &ack, sizeof(ack), 0) < 0) {
+		fprintf(stderr, "Unable to receive server sent confirmation\n");
+		exit(1);
+	}
+	if (ntohs(ack) < 0) {
+		fprintf(stdout, "Failed BM confirmation\n");
+	}
+
     } else if (!strncmp(operation, "EX", 2)){
 			break;
     } else {
@@ -303,6 +302,8 @@ int main(int argc, char* argv[]){
 		fprintf(stdout, "\n> "); fflush(stdout);
   }
 
+	pthread_join(message_thread, NULL);
+	/* Signal thread to join? */
   close(s);
 
   return 0;
