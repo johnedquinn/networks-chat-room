@@ -151,7 +151,6 @@ void pm(args *a) {
 	/* Send list of active users */
 	string names = "";
 	string username(a->username);
-	cout <<username;
 	for(auto &key: *(a->activeUsers)) {
 		if (key.first != username) names.append(key.first + "\n");
 	}
