@@ -3,9 +3,9 @@ CFLAGS = -g -Wall -Werror -std=c++11 -fPIC
 LD = g++
 LDFLAGS = -L../lib -lcrypto -lz -pthread
 
-all = myclient
+all = chatclient
 
-myclient:	client.o
+chatclient:	client.o
 	@echo "Linking $@"
 	$(LD) -o $@ $^ $(LDFLAGS)
 

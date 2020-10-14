@@ -13,6 +13,7 @@ pbald, jquin13, rreutima
 #include <map>
 #include <string>
 #include <iostream>
+#include <stdexcept>
 #include <fstream>
 #include <utility>
 
@@ -133,6 +134,7 @@ typedef struct args args;
 struct args {
 		int s;
 		pthread_mutex_t lock;
+		char* username;
 		map<string, pair<int, string> > * activeUsers;
 };
 
@@ -148,8 +150,10 @@ void pm(args *a) {
 
 	/* Send list of active users */
 	string names = "";
-	for(auto &key: *(a->activeUsers))
-		    names.append(key.first + "\n");
+	string username(a->username);
+	for(auto &key: *(a->activeUsers)) {
+		if (key.first != username) names.append(key.first + "\n");
+	}
 
 	if(send(a->s, names.c_str(), names.length() + 1, 0) < 0) {
 		perror("Error sending client list."); 
@@ -163,7 +167,6 @@ void pm(args *a) {
 	}
 
 	string t(target);
-	t.pop_back();
 
 	/* Reply with public key */
 	const char* pubKey = (a->activeUsers->at(t).second).c_str();
@@ -185,17 +188,28 @@ void pm(args *a) {
 	m = "\r1" + m;
 	const char* finalMessage = m.c_str();
 
-	if(send(a->activeUsers->at(t).first, finalMessage, strlen(finalMessage) + 1, 0) < 0) {
-		perror("Error sending message to user.\n");
-		exit(1);
+	try {
+		if(send(a->activeUsers->at(t).first, finalMessage, strlen(finalMessage) + 1, 0) < 0) {
+			perror("Error sending message to user.\n");
+			exit(1);
+		}
+
+		/* Sends confirmation of failure to client */
+		char success[BUFSIZ] = "Private message sent.";
+		if(send(a->s, success, strlen(success) + 1, 0) < 0) {
+			perror("Error sending confirmation to client.\n");
+			exit(1);
+		}
+	} catch ( out_of_range& oor2) {
+		/* Sends confirmation of failure to client */
+		char failure[BUFSIZ] = "Private message failed to send.";
+		if(send(a->s, failure, strlen(failure) + 1, 0) < 0) {
+			perror("Error sending confirmation to client.\n");
+			exit(1);
+		}
+
 	}
 
-	/* Sends confirmation of success  to client */
-	char success[BUFSIZ] = "success";
-	if(send(a->s, success, strlen(success) + 1, 0) < 0) {
-		perror("Error sending target public key to client.\n");
-		exit(1);
-	}
 
 }
 
@@ -248,16 +262,18 @@ void bm(args* a){
 * --
 * @param  a
 */
-void cleanup(args * a, string uname) {
+void cleanup(args * a) {
 
 	// Close Socket
 	close(a->s);
 
 	// Update Active Users
 	pthread_mutex_lock(&(a->lock));
-	a->activeUsers->erase(uname);
+	a->activeUsers->erase(a->username);
   NUM_THREADS--;
 	pthread_mutex_unlock(&(a->lock));
+
+	free(a->username);
 	
 }
 
@@ -283,8 +299,10 @@ void* client_interaction(void* arguments){
 		exit(1);
 	}
 	string uname(username);
+	a->username = strdup(username);
 
 	// Login or Create User
+	/* @TODO: Verify user isn't already online */
 	string cpub = client_authenticate(a->s, username);
 
 	pthread_mutex_lock(&(a->lock));
@@ -306,7 +324,7 @@ void* client_interaction(void* arguments){
 		} else if(!strncmp(command, "PM", 2)) {
 			pm(a);
 		} else if(!strncmp(command, "EX", 2)) {
-			cleanup(a, uname);
+			cleanup(a);
 			break;
 		}
 
