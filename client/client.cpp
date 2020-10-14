@@ -41,15 +41,17 @@ void* handle_messages(void* arg){
 				/* Data Message */
 				string m(msg);
 				if(msg[1] == '0') {
-					cout << "New public message!" << endl;
+					cout << "\n***** New public message *****" << endl;
 					m.erase(0,2);
-					cout << m << endl;
+					cout << m;
+					cout << "(PM / BM / EX) > "; fflush(stdout);
 				} else if (msg[1] == '1') {
-					cout << "New private message!" << endl;
+					cout << "\n***** New private message *****" << endl;
 					m.erase(0,2);
 					char* finalMessage = strdup(m.c_str());
-					cout << decrypt(finalMessage) << endl;
+					cout << decrypt(finalMessage);
 					free(finalMessage);
+					cout << "(PM / BM / EX) > "; fflush(stdout);
 				}
 			} else {
 				return (void *) strdup(msg);
@@ -136,18 +138,6 @@ void login(int s, char* username){
 }
 
 
-/*
- * @func Private Message (PM)
- *
- * @params s: socket descriptor for server
- */
-void PM(int s){
-
-
-
-	
-}
-
 typedef struct args args;
 struct args {
 	int s;
@@ -226,8 +216,6 @@ int main(int argc, char* argv[]){
     fgets(operation, BUFSIZ, stdin);
 
     if(!strncmp(operation, "PM", 2)){
-			//PM(s);
-
 
 		// Send private message to server
 		char cmd[3] = "PM";
@@ -245,13 +233,14 @@ int main(int argc, char* argv[]){
 			fprintf(stdout, "Error: unable to create thread\n");
 			exit(-1);
 		}
+		cout << "Clients online: " << endl;
 		cout << (char *) clientList;
 		free(clientList);
 
 		// Send target to server
 		char target[BUFSIZ] = "";
 		char message[BUFSIZ] = "";
-
+		cout << "Client target: "; fflush(stdout);
 		fgets(target, BUFSIZ, stdin);
 
 		if(send(s, target, strlen(target) + 1, 0) < 0) {
@@ -269,7 +258,7 @@ int main(int argc, char* argv[]){
 		}
 
 		/* Get user message, encrypt and send */
-		cout << "Insert Message" << endl;
+		cout << "Enter Message: ";
 		fgets(message, BUFSIZ, stdin);
 
 		char* m = encrypt(message, (char*) targetPubKey);
