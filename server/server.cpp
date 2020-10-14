@@ -11,7 +11,7 @@ using namespace std;
 #include <strings.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <set>
+#include <map>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -131,8 +131,51 @@ typedef struct args args;
 struct args {
 		int s;
 		pthread_mutex_t lock;
-		set<string> activeUsers;
+		map<string, pair<int, string> > activeUsers;
 };
+
+/*
+* @func   pm
+* @desc   private message handler function
+*/
+
+void pm(args *a) {
+
+	char target[MAX_LINE] = "";
+
+	/* Send list of active users */
+
+	/* Recieve username of target user */
+	if(recv(a->s, target, sizeof(target), 0) < 0) {
+		perror("Server Received Error!"); 
+		exit(1);
+	}
+
+	memmove(target, target + 1, strlen(target));
+
+	/* Reply with public key */
+	char* pubKey = getPubKey();
+	int pubKeyLen = strlen(pubKey);
+
+	if(send(a->s, pubKey, pubKeyLen, 0) < 0) {
+		perror("Error sending public key to server.\n");
+		exit(1);
+	}
+
+	/* Recieve size of message */
+
+
+	/* Recieves encrypted message */
+	
+
+	/* Sends message to user socket if online */
+
+
+	/* Sends confirmation of success of failure to client */
+
+
+}
+
 
 /*
 * @func   client_interaction
@@ -177,7 +220,7 @@ void* client_interaction(void* arguments){
 		if(!strncmp(command, "BM", 2)) {
 
 		} else if(!strncmp(command, "PM", 2)) {
-
+			pm(a);
 		} else if(!strncmp(command, "EX", 2)) {
 
 		}
@@ -251,7 +294,7 @@ int main(int argc, char* argv[]){
 
 	pthread_mutex_t lock;
 	pthread_mutex_init(&lock, NULL);
-	set<string> activeUsers;
+	map<string, pair<int, string> > activeUsers;
 
   while(1) {
 
