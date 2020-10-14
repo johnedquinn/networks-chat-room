@@ -327,8 +327,6 @@ int main(int argc, char* argv[]){
       return 1;
     }
 
-		cout << "ACTIVE USERS COUNT:" << activeUsers.size() <<  endl;
-
   }
 
   return 0;
