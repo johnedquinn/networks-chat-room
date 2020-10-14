@@ -144,13 +144,12 @@ struct args {
 void pm(args *a) {
 
 	char target[BUFSIZ] = "";
+	char message[BUFSIZ] = "";
 
 	/* Send list of active users */
 	string names = "";
 	for(auto &key: *(a->activeUsers))
 		    names.append(key.first + "\n");
-
-	cout << names;
 
 	if(send(a->s, names.c_str(), names.length() + 1, 0) < 0) {
 		perror("Error sending client list."); 
@@ -163,28 +162,40 @@ void pm(args *a) {
 		exit(1);
 	}
 
-	memmove(target, target + 1, strlen(target));
+	string t(target);
+	t.pop_back();
 
 	/* Reply with public key */
-	char* pubKey = getPubKey();
-	int pubKeyLen = strlen(pubKey);
+	const char* pubKey = (a->activeUsers->at(t).second).c_str();
 
-	if(send(a->s, pubKey, pubKeyLen, 0) < 0) {
-		perror("Error sending public key to server.\n");
+	if(send(a->s, pubKey, strlen(pubKey) + 1, 0) < 0) {
+		perror("Error sending target public key to client.\n");
 		exit(1);
 	}
 
-	/* Recieve size of message */
-
-
 	/* Recieves encrypted message */
-	
+	if(recv(a->s, message, sizeof(message), 0) < 0) {
+		perror("Error receiving username."); 
+		exit(1);
+	}
+
 
 	/* Sends message to user socket if online */
+	string m(message);
+	m = "\r1" + m;
+	const char* finalMessage = m.c_str();
 
+	if(send(a->activeUsers->at(t).first, finalMessage, strlen(finalMessage) + 1, 0) < 0) {
+		perror("Error sending message to user.\n");
+		exit(1);
+	}
 
-	/* Sends confirmation of success of failure to client */
-
+	/* Sends confirmation of success  to client */
+	char success[BUFSIZ] = "success";
+	if(send(a->s, success, strlen(success) + 1, 0) < 0) {
+		perror("Error sending target public key to client.\n");
+		exit(1);
+	}
 
 }
 
@@ -279,8 +290,6 @@ void* client_interaction(void* arguments){
 			exit(1);
 		}
   	if(len == 0) break;
-
-		printf("%s\n", command);
 
 		/* Command specific functions */
 		if(!strncmp(command, "BM", 2)) {
