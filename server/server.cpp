@@ -27,13 +27,37 @@ using namespace std;
 int NUM_THREADS = 0;
 char AUTH_FILE [30] = "authfile.txt";
 
+typedef struct args args;
+struct args {
+		int s;
+		pthread_mutex_t lock;
+		char* username;
+		map<string, pair<int, string> > * activeUsers;
+};
+
 /*
  * @func   client_authenticate
  * @desc   logs in user or creates account
  * --
  * @param  s  socket desc
  */
-string client_authenticate (int s, char uname []) {
+string client_authenticate (args * a, char uname []) {
+	// Grab socket
+	int s = a->s;
+
+	// Make Sure User Is Not Already Logged In
+	string u(uname);
+	for (auto e : *(a->activeUsers)) {
+		if (e.first == u) {
+			short ack = 3; ack = htons(ack);
+			if (send(s, &ack, sizeof(ack), 0) < 0) {
+				fprintf(stderr, "Unable to send ack\n");
+				exit(1);
+			}
+			u = "";
+			return u;
+		}
+	}
 
 	// Open Authentication File
 	FILE * fp = fopen(AUTH_FILE, "r");
@@ -130,13 +154,7 @@ string client_authenticate (int s, char uname []) {
 
 }
 
-typedef struct args args;
-struct args {
-		int s;
-		pthread_mutex_t lock;
-		char* username;
-		map<string, pair<int, string> > * activeUsers;
-};
+
 
 /*
 * @func   pm
@@ -159,6 +177,9 @@ void pm(args *a) {
 		perror("Error sending client list."); 
 		exit(1);
 	}
+
+	// No Names Found
+	if (!names.length()) return;
 
 	/* Recieve username of target user */
 	if(recv(a->s, target, sizeof(target), 0) < 0) {
@@ -303,7 +324,8 @@ void* client_interaction(void* arguments){
 
 	// Login or Create User
 	/* @TODO: Verify user isn't already online */
-	string cpub = client_authenticate(a->s, username);
+	string cpub = client_authenticate(a, username);
+	if (!cpub.length()) return NULL;
 
 	pthread_mutex_lock(&(a->lock));
 	a->activeUsers->insert(pair<string, pair<int, string> >(uname, pair<int, string> (a->s, cpub)));

@@ -86,6 +86,10 @@ void login(int s, char* username){
 		exit(1);
 	}
 	if (ntohs(ack) == 1) fprintf(stdout, "Existing User\n");
+	else if (ntohs(ack) == 3) {
+		fprintf(stdout, "User Already Logged In. Exiting Application.\n");
+		exit(1);
+	}
 	else fprintf(stdout, "Creating New User\n");
 	
 
@@ -237,6 +241,12 @@ int main(int argc, char* argv[]){
 			exit(-1);
 		}
 		string cl((char *) clientList);
+		if (!cl.length()) {
+			cout << "No Peers Online" << endl;
+ 			fprintf(stdout, "> Please enter a command (BM: Broadcast Messaging, PM: Private Messaging,  EX: Exit)\n> ");
+			fflush(stdout);
+			continue;
+		}
 		cout << "Peers online: " << endl;
 		cout << cl;
 
@@ -362,6 +372,14 @@ int main(int argc, char* argv[]){
 			free(tstatus);
 	
     } else if (!strncmp(operation, "EX", 2)){
+			// Send broadcast message to server
+			char cmd[3] = "EX";
+			if (send(s, cmd, strlen(cmd) + 1, 0) < 0) {
+				fprintf(stdout, "Unable to send BM operation\n");
+				exit(1);
+			}
+			// Kill Thread
+			pthread_cancel(message_thread);
 			break;
     } else {
       fprintf(stdout, "Invalid input %s\n", operation);
@@ -372,7 +390,6 @@ int main(int argc, char* argv[]){
   }
 
 	pthread_join(message_thread, NULL);
-	/* Signal thread to join? */
   close(s);
 
   return 0;
